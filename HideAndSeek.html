@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<h1 id="score"></h1>
+<button onclick= "fem()" >FEM</button>
+<script>
+
+	var canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d"),mw = 1500,mh = 750;
+	canvas.width = mw;
+	canvas.height = mh;
+	document.body.style.padding = '0 0 0 0';
+	document.body.style.margin = '0 0 0 0';
+
+	var tests = 100, out = false, loses = 0, redWinning = true, bodySize = 25, DT = 15, FEM = false , dt = DT,timer = 0, timeLimit = 10000, VI = 1, ANGI = 3, SPD = 5, bestRedMind = new obj(375,375,90,0,0,0,0,0), bestBlueMind = new obj(1125,375,-90,0,0,0,0,0), redVictories = 0, blueVictories = 0;
+
+	function fem(){
+		FEM = !(FEM);
+		if (FEM) {
+			dt = 0;
+		}else{
+			dt = DT;
+		}
+	}
+
+	var reds = [], blues = [];
+
+	var obstacles = [];
+
+	function mind(c10,c11,c12,c20,c21) {
+		this.c1 = [c10,c11,c12];
+  		this.c2 = [c20,c21];
+	}
+
+	function obj(x,y,ang,c10,c11,c12,c20,c21) {
+		this.x = x;
+		this.y = y;
+		this.ang = ang;
+		this.mind = new mind(c10,c11,c12,c20,c21);
+	}
+
+	setInterval(function(){
+		if(!out){
+			if (reds.length == 0) {
+				remake();
+			}
+			if (!FEM) {
+				render();
+				document.getElementById('score').textContent = "R- "+redVictories+" X B- "+blueVictories+" RedIsWinning? "+redWinning;
+			}
+			update();
+			timer+=DT;
+		}else{
+
+			redWinning = !(redWinning);
+
+			remake();
+
+			out = false;	
+		}
+	}, dt)
+
+	function render() {
+		ctx.fillStyle = "#333333";
+		ctx.fillRect(0,0,2000,1000);
+
+		ctx.beginPath();
+
+		ctx.fillStyle = "#ff0000";
+		ctx.arc(reds[0].x,reds[0].y, bodySize, 0, 2 * Math.PI);
+
+		ctx.fill();
+
+		ctx.beginPath();
+
+		ctx.fillStyle = "#0000ff";
+		ctx.arc(blues[0].x,blues[0].y, bodySize, 0, 2 * Math.PI);
+
+		ctx.fill();
+	}
+
+	function update(){
+		for (var i = reds.length - 1; i >= 0; i--) {
+			let red = reds[i];
+			let v0=0,v1=0,v2=0,a=red.ang;
+			while(true){
+				let x = red.x + v0*Math.sin(((a-45)*Math.PI)/180), y = red.y + v0*Math.cos((a*Math.PI)/180);
+				if (Math.sqrt(Math.pow(Math.abs(x-blues[i].x),2)+Math.pow(Math.abs(y-blues[i].y),2),2) < bodySize) {
+					v0 =-1;
+					break;
+				}
+				if (x<0 || x>mw || y<0 || y>mh) {
+					break;
+				}
+				v0+=VI;
+			}
+			while(true){
+				let x = red.x + v1*Math.sin((a*Math.PI)/180), y = red.y + v1*Math.cos((a*Math.PI)/180);
+				if (Math.sqrt(Math.pow(Math.abs(x-blues[i].x),2)+Math.pow(Math.abs(y-blues[i].y),2),2) < bodySize) {
+					v1 =-1;
+					break;
+				}
+				if (x<0 || x>mw || y<0 || y>mh) {
+					break;
+				}
+				v1+=VI;
+			}
+			while(true){
+				let x = red.x + v2*Math.sin(((a+45)*Math.PI)/180), y = red.y + v2*Math.cos((a*Math.PI)/180);
+				if (Math.sqrt(Math.pow(Math.abs(x-blues[i].x),2)+Math.pow(Math.abs(y-blues[i].y),2),2) < bodySize) {
+					v2 =-1;
+					break;
+				}
+				if (x<0 || x>mw || y<0 || y>mh) {
+					break;
+				}
+				v2+=VI;
+			}
+			let r = (v0*red.mind.c1[0]+v1*red.mind.c1[1]+v2*red.mind.c1[2])*(red.mind.c2[0]+red.mind.c2[1])
+			if (r >= 0) {
+				red.ang+=r>180?180:r;
+			}else
+			if (r < 0) {
+				red.ang+=r>180?180:r;
+			}
+
+			let tx = red.x,ty = red.y;
+  			tx+=SPD*Math.sin((a*Math.PI)/180);
+    		ty+=SPD*Math.cos((a*Math.PI)/180);
+  			if(tx>0 && tx<mw && ty>0 && ty<mh){
+    			red.x=tx;
+    			red.y=ty;
+    		}
+
+			if(red.x-bodySize<=0 || red.x+bodySize>=mw || red.y-bodySize<=0 || red.y+bodySize>=mh){
+				if (redWinning) {
+					bestBlueMind = new obj(1125,375,-90,blues[i].mind.c1[0],blues[i].mind.c1[1],blues[i].mind.c1[2],blues[i].mind.c2[0],blues[i].mind.c2[1]);
+					out = true;
+					break;
+				}
+				loses++;
+				blues.splice(i,1);
+				reds.splice(i,1);
+				i--;
+				blueVictories++;
+			}
+		}
+		for (var i = blues.length - 1; i >= 0; i--) {
+			let blue = blues[i];
+			let v0=0,v1=0,v2=0,a=blue.ang;
+			while(true){
+				let x = blue.x + v0*Math.sin(((a-45)*Math.PI)/180), y = blue.y + v0*Math.cos((a*Math.PI)/180);
+				if (Math.sqrt(Math.pow(Math.abs(x-reds[i].x),2)+Math.pow(Math.abs(y-reds[i].y),2),2) < bodySize) {
+					v0 =-1;
+					break;
+				}
+				if (x<0 || x>mw || y<0 || y>mh) {
+					break;
+				}
+				v0+=VI;
+			}
+			while(true){
+				let x = blue.x + v1*Math.sin((a*Math.PI)/180), y = blue.y + v1*Math.cos((a*Math.PI)/180);
+				if (Math.sqrt(Math.pow(Math.abs(x-reds[i].x),2)+Math.pow(Math.abs(y-reds[i].y),2),2) < bodySize) {
+					v1 =-1;
+					break;
+				}
+				if (x<0 || x>mw || y<0 || y>mh) {
+					break;
+				}
+				v1+=VI;
+			}
+			while(true){
+				let x = blue.x + v2*Math.sin(((a+45)*Math.PI)/180), y = blue.y + v2*Math.cos((a*Math.PI)/180);
+				if (Math.sqrt(Math.pow(Math.abs(x-reds[i].x),2)+Math.pow(Math.abs(y-reds[i].y),2),2) < bodySize) {
+					v2 =-1;
+					break;
+				}
+				if (x<0 || x>mw || y<0 || y>mh) {
+					break;
+				}
+				v2+=VI;
+			}
+			let r = (v0*blue.mind.c1[0]+v1*blue.mind.c1[1]+v2*blue.mind.c1[2])*(blue.mind.c2[0]+blue.mind.c2[1])
+
+			if (r >= 0) {
+				 blue.ang+=r>180?180:r;
+			}else
+			if (r < 0) {
+				blue.ang+=r>180?180:r;
+			}
+				
+
+			let tx = blue.x,ty = blue.y;
+  			tx+=SPD*Math.sin((a*Math.PI)/180);
+    		ty+=SPD*Math.cos((a*Math.PI)/180);
+  			if(tx>0 && tx<mw && ty>0 && ty<mh){
+    			blue.x=tx;
+    			blue.y=ty;
+    		}
+
+			if (Math.sqrt(Math.pow(Math.abs(blue.x-reds[i].x),2)+Math.pow(Math.abs(blue.y-reds[i].y),2),2) < bodySize*2) {
+				if (!redWinning) {
+					bestRedMind = new obj(375,375,90,reds[i].mind.c1[0],reds[i].mind.c1[1],reds[i].mind.c1[2],reds[i].mind.c2[0],reds[i].mind.c2[1]);
+					out = true;
+					break;
+				}
+				loses++;
+				blues.splice(i,1);
+				reds.splice(i,1);
+				i--;
+				redVictories++;
+				
+			}else if(blue.x-bodySize<=0 || blue.x+bodySize>=mw || blue.y-bodySize<=0 || blue.y+bodySize>=mh){
+				if (!redWinning) {
+					bestRedMind = new obj(375,375,90,reds[i].mind.c1[0],reds[i].mind.c1[1],reds[i].mind.c1[2],reds[i].mind.c2[0],reds[i].mind.c2[1]);
+					out = true;
+					break;
+				}
+				loses++;
+				blues.splice(i,1);
+				reds.splice(i,1);
+				i--;
+				redVictories++;		
+			}
+			else if(timer >= timeLimit){
+				if (redWinning) {
+					bestBlueMind = new obj(1125,375,-90,blue.mind.c1[0],blue.mind.c1[1],blue.mind.c1[2],blue.mind.c2[0],blue.mind.c2[1]);
+					out = true;
+					break;
+				}
+				loses++;
+				blues.splice(i,1);
+				reds.splice(i,1);
+				i--;
+				blueVictories++;
+
+			}
+		}
+	}
+
+	function remake(){
+
+		timer = 0;
+		reds = [];
+		blues = [];
+
+		if (redWinning) {
+			for (var i = tests - 1; i >= 0; i--) {
+				reds.push(new obj(375,375,90,bestRedMind.mind.c1[0],bestRedMind.mind.c1[1],bestRedMind.mind.c1[2],bestRedMind.mind.c2[0],bestRedMind.mind.c2[1]));
+				blues.push(new obj(1125,375,-90,bestBlueMind.mind.c1[0],bestBlueMind.mind.c1[1],bestBlueMind.mind.c1[2],bestBlueMind.mind.c2[0],bestBlueMind.mind.c2[1]));
+				blues[blues.length-1].mind.c1[Math.round(Math.random()*2)] += Math.random()*2-0.5;
+				blues[blues.length-1].mind.c2[Math.round(Math.random()*1)] += Math.random()*2-0.5;
+			}
+		}else{
+			for (var i = tests - 1; i >= 0; i--) {
+				reds.push(new obj(375,375,90,bestRedMind.mind.c1[0],bestRedMind.mind.c1[1],bestRedMind.mind.c1[2],bestRedMind.mind.c2[0],bestRedMind.mind.c2[1]));
+				blues.push(new obj(1125,375,-90,bestBlueMind.mind.c1[0],bestBlueMind.mind.c1[1],bestBlueMind.mind.c1[2],bestBlueMind.mind.c2[0],bestBlueMind.mind.c2[1]));
+				reds[reds.length-1].mind.c1[Math.round(Math.random()*2)] += Math.random()*2-0.5;
+				reds[reds.length-1].mind.c2[Math.round(Math.random()*1)] += Math.random()*2-0.5;
+			}
+		}
+	}
+</script>
+
+</body>
+</html>
